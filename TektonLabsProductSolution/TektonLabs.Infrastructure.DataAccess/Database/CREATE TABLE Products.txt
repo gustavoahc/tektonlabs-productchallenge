@@ -1,0 +1,8 @@
+﻿CREATE TABLE Products (
+	ProductId int IDENTITY,
+	Name varchar(100),
+	Status int,
+	Stock int,
+	Description varchar(200),
+	Price decimal(12,2)
+)

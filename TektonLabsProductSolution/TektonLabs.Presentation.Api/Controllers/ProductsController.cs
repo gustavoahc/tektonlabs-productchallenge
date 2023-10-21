@@ -1,4 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
+using TektonLabs.Core.Application.Services.Products;
+using TektonLabs.Core.Domain.Entities;
+using TektonLabs.Presentation.Api.ApiModels.Request;
 using TektonLabs.Presentation.Api.ApiModels.Response;
 
 namespace TektonLabs.Presentation.Api.Controllers
@@ -7,9 +11,13 @@ namespace TektonLabs.Presentation.Api.Controllers
     [ApiController]
     public class ProductsController : ControllerBase
     {
-        public ProductsController()
-        {
+        private readonly IProductService _service;
+        private readonly IMapper _mapper;
 
+        public ProductsController(IProductService service, IMapper mapper)
+        {
+            _service = service;
+            _mapper = mapper;
         }
 
         /// <summary>
@@ -20,13 +28,33 @@ namespace TektonLabs.Presentation.Api.Controllers
         [HttpGet("{id}", Name = "GetProduct")]
         public async Task<IActionResult> Get(int id)
         {
-            ProductResponse response = new ProductResponse();
-            if (id == 0)
+            Product product = await _service.GetProductAsync(id);
+            ProductResponse response = _mapper.Map<ProductResponse>(product);
+            if (response != null)
             {
-                return NotFound();
+                return Ok(response);
             }
 
-            return Ok(response);
+            return NotFound();
+        }
+
+        /// <summary>
+        /// Add a new product to database
+        /// </summary>
+        /// <param name="product"></param>
+        /// <returns></returns>
+        [HttpPost]
+        public async Task<IActionResult> Post([FromBody] ProductRequest product)
+        {
+            Product productToInsert = _mapper.Map<Product>(product);
+            Product result = await _service.InsertProductAsync(productToInsert);
+
+            if (result == null)
+            {
+                return BadRequest(_service.GetValidationErrors());
+            }
+
+            return new CreatedAtRouteResult("GetProduct", new { id = 1 }, result);
         }
     }
 }
