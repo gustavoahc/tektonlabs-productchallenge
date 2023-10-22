@@ -1,13 +1,17 @@
 ﻿using AutoMapper;
 using FluentAssertions;
+using LazyCache;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using Moq;
 using TektonLabs.Core.Application.Services.Products;
+using TektonLabs.Core.Domain.Common;
 using TektonLabs.Core.Domain.Entities;
 using TektonLabs.Presentation.Api.ApiModels.Request;
 using TektonLabs.Presentation.Api.ApiModels.Response;
 using TektonLabs.Presentation.Api.Controllers;
 using TektonLabs.Presentation.Api.Helpers.Mapping;
+using TektonLabs.Testing.UnitTests.TestData;
 
 namespace TektonLabs.Testing.UnitTests.Controllers
 {
@@ -15,6 +19,7 @@ namespace TektonLabs.Testing.UnitTests.Controllers
     {
         private Mock<IProductService> _service;
         private readonly IMapper _mapper;
+        private Mock<IAppCache> _cache;
 
         public TestProductsController()
         {
@@ -33,6 +38,7 @@ namespace TektonLabs.Testing.UnitTests.Controllers
         public void Setup()
         {
             _service = new Mock<IProductService>();
+            _cache = new Mock<IAppCache>();
         }
 
         [Test]
@@ -41,7 +47,11 @@ namespace TektonLabs.Testing.UnitTests.Controllers
             Product product = new Product { ProductId = 1, Name = "Product", Price = 1, Status = 1, Stock = 1 };
             _service.Setup(s => s.GetProductAsync(1))
                 .ReturnsAsync(product);
-            var controller = new ProductsController(_service.Object, _mapper);
+
+            _cache.Setup(c => c.GetOrAdd(It.IsAny<string>(), It.IsAny<Func<ICacheEntry, List<StatusData>>>(), It.IsAny<MemoryCacheEntryOptions>()))
+                .Returns(ProductTestData.GetStatusData());
+
+            var controller = new ProductsController(_service.Object, _mapper, _cache.Object);
 
             var result = (OkObjectResult)await controller.Get(1);
 
@@ -54,7 +64,11 @@ namespace TektonLabs.Testing.UnitTests.Controllers
             Product product = new Product { ProductId = 1, Name = "Product", Price = 1, Status = 1, Stock = 1 };
             _service.Setup(s => s.GetProductAsync(1))
                 .ReturnsAsync(product);
-            var controller = new ProductsController(_service.Object, _mapper);
+
+            _cache.Setup(c => c.GetOrAdd(It.IsAny<string>(), It.IsAny<Func<ICacheEntry, List<StatusData>>>(), It.IsAny<MemoryCacheEntryOptions>()))
+                .Returns(ProductTestData.GetStatusData());
+
+            var controller = new ProductsController(_service.Object, _mapper, _cache.Object);
 
             var result = (OkObjectResult)await controller.Get(1);
 
@@ -65,7 +79,7 @@ namespace TektonLabs.Testing.UnitTests.Controllers
         [Test]
         public async Task Get_OnNoProductFound_ReturnsStatusCode404()
         {
-            var controller = new ProductsController(_service.Object, _mapper);
+            var controller = new ProductsController(_service.Object, _mapper, _cache.Object);
 
             var result = (NotFoundResult)await controller.Get(1);
 
@@ -79,7 +93,7 @@ namespace TektonLabs.Testing.UnitTests.Controllers
             _service.Setup(s => s.InsertProductAsync(It.IsAny<Product>()))
                 .ReturnsAsync(product);
 
-            var controller = new ProductsController(_service.Object, _mapper);
+            var controller = new ProductsController(_service.Object, _mapper, _cache.Object);
             ProductRequest productRequest = _mapper.Map<ProductRequest>(product);
 
             var result = (CreatedAtRouteResult)await controller.Post(productRequest);
@@ -93,7 +107,7 @@ namespace TektonLabs.Testing.UnitTests.Controllers
             _service.Setup(s => s.GetValidationErrors())
                 .Returns(new List<FluentValidation.Results.ValidationFailure>());
 
-            var controller = new ProductsController(_service.Object, _mapper);
+            var controller = new ProductsController(_service.Object, _mapper, _cache.Object);
             ProductRequest productRequest = new ProductRequest();
 
             var result = (BadRequestObjectResult)await controller.Post(productRequest);

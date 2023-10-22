@@ -1,5 +1,6 @@
 ﻿using FluentValidation.Results;
 using TektonLabs.Core.Application.Validators;
+using TektonLabs.Core.Domain.Common;
 using TektonLabs.Core.Domain.Entities;
 
 namespace TektonLabs.Core.Application.Services.Products
@@ -35,6 +36,15 @@ namespace TektonLabs.Core.Application.Services.Products
         public List<ValidationFailure> GetValidationErrors()
         {
             return _validationErrors;
+        }
+
+        public List<StatusData> GetStatusData()
+        {
+            List<StatusData> statusData = new List<StatusData>();
+            statusData.Add(new StatusData { Id = 0, Name = "Inactive" });
+            statusData.Add(new StatusData { Id = 1, Name = "Active" });
+
+            return statusData;
         }
     }
 }

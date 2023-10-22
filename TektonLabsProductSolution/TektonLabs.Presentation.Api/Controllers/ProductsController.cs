@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
+using LazyCache;
 using Microsoft.AspNetCore.Mvc;
 using TektonLabs.Core.Application.Services.Products;
+using TektonLabs.Core.Domain.Common;
 using TektonLabs.Core.Domain.Entities;
 using TektonLabs.Presentation.Api.ApiModels.Request;
 using TektonLabs.Presentation.Api.ApiModels.Response;
@@ -13,11 +15,13 @@ namespace TektonLabs.Presentation.Api.Controllers
     {
         private readonly IProductService _service;
         private readonly IMapper _mapper;
+        private readonly IAppCache _cache;
 
-        public ProductsController(IProductService service, IMapper mapper)
+        public ProductsController(IProductService service, IMapper mapper, IAppCache cache)
         {
             _service = service;
             _mapper = mapper;
+            _cache = cache;
         }
 
         /// <summary>
@@ -30,12 +34,22 @@ namespace TektonLabs.Presentation.Api.Controllers
         {
             Product product = await _service.GetProductAsync(id);
             ProductResponse response = _mapper.Map<ProductResponse>(product);
-            if (response != null)
+            if (response == null)
             {
-                return Ok(response);
+                return NotFound();
             }
 
-            return NotFound();
+            Func<List<StatusData>> status = () => GetStatus();
+            List<StatusData> statusData = _cache.GetOrAdd("statuscache", status, DateTimeOffset.Now.AddMinutes(5));
+
+            response.StatusName = statusData.Find(s => s.Id == product.Status).Name;
+
+            return Ok(response);
+        }
+
+        private List<StatusData> GetStatus()
+        {
+            return _service.GetStatusData();
         }
 
         /// <summary>

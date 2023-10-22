@@ -18,6 +18,9 @@ var builder = WebApplication.CreateBuilder(args);
         .AddDataAccessServices(builder.Configuration)
         .AddApplicationServices();
 
+    //Cache
+    builder.Services.AddLazyCache();
+
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
