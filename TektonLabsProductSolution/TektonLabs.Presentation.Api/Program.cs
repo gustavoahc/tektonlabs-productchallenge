@@ -1,6 +1,7 @@
 using AutoMapper;
 using TektonLabs.Core.Application;
 using TektonLabs.Infrastructure.DataAccess;
+using TektonLabs.Presentation.Api.ApiModels.SettingParameters;
 using TektonLabs.Presentation.Api.Helpers.Mapping;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,6 +13,9 @@ var builder = WebApplication.CreateBuilder(args);
     });
     IMapper mapper = mappingConfig.CreateMapper();
     builder.Services.AddSingleton(mapper);
+
+    //Load app parameters
+    builder.Services.Configure<Parameter>(builder.Configuration.GetSection(Parameter.SectionName));
 
     //Add services
     builder.Services

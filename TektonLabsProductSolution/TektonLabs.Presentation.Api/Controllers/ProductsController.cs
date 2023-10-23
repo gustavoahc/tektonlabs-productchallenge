@@ -1,11 +1,14 @@
 ﻿using AutoMapper;
 using LazyCache;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using TektonLabs.Core.Application.Services.Products;
 using TektonLabs.Core.Domain.Common;
 using TektonLabs.Core.Domain.Entities;
 using TektonLabs.Presentation.Api.ApiModels.Request;
 using TektonLabs.Presentation.Api.ApiModels.Response;
+using TektonLabs.Presentation.Api.ApiModels.SettingParameters;
+using TektonLabs.Presentation.Api.Helpers.ExternalApi;
 
 namespace TektonLabs.Presentation.Api.Controllers
 {
@@ -16,12 +19,14 @@ namespace TektonLabs.Presentation.Api.Controllers
         private readonly IProductService _service;
         private readonly IMapper _mapper;
         private readonly IAppCache _cache;
+        private readonly Parameter _parameter;
 
-        public ProductsController(IProductService service, IMapper mapper, IAppCache cache)
+        public ProductsController(IProductService service, IMapper mapper, IAppCache cache, IOptions<Parameter> parameter)
         {
             _service = service;
             _mapper = mapper;
             _cache = cache;
+            _parameter = parameter.Value;
         }
 
         /// <summary>
@@ -38,6 +43,24 @@ namespace TektonLabs.Presentation.Api.Controllers
             {
                 return NotFound();
             }
+
+            string discountsUrl = String.Format("{0}?productId={1}", _parameter.DiscountsUrl, id.ToString());
+            HttpResponseMessage httpResponse = await ExternalAccess.GetJsonDataFromUrlAsync(discountsUrl);
+
+            if (!httpResponse.IsSuccessStatusCode)
+            {
+                return StatusCode(500);
+            }
+
+            List<DiscountResponse> discounts = await ExternalAccess.ConvertHttpResponseToObject<DiscountResponse>(httpResponse);
+            if (discounts.Count == 0)
+            {
+                return NotFound();
+            }
+
+            int discount = discounts.Find(d => d.ProductId == id).Discount;
+            response.Discount = discount;
+            response.FinalPrice = response.Price * (100 - discount) / 100;
 
             Func<List<StatusData>> status = () => GetStatus();
             List<StatusData> statusData = _cache.GetOrAdd("statuscache", status, DateTimeOffset.Now.AddMinutes(5));
