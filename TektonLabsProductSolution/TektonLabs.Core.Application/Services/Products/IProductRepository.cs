@@ -7,5 +7,7 @@ namespace TektonLabs.Core.Application.Services.Products
         Task<Product> GetByIdAsync(int id);
 
         Task<Product> InsertAsync(Product product);
+
+        Task<int> UpdateAsync(Product product);
     }
 }

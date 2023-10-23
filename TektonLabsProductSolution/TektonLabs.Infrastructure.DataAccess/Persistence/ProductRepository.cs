@@ -1,4 +1,5 @@
-﻿using TektonLabs.Core.Application.Services.Products;
+﻿using Microsoft.EntityFrameworkCore;
+using TektonLabs.Core.Application.Services.Products;
 using TektonLabs.Core.Domain.Entities;
 
 namespace TektonLabs.Infrastructure.DataAccess.Persistence
@@ -18,6 +19,12 @@ namespace TektonLabs.Infrastructure.DataAccess.Persistence
             await _context.Products.AddAsync(product);
             await _context.SaveChangesAsync();
             return product;
+        }
+
+        public async Task<int> UpdateAsync(Product product)
+        {
+            _context.Entry(product).State = EntityState.Modified;
+            return await _context.SaveChangesAsync();
         }
     }
 }

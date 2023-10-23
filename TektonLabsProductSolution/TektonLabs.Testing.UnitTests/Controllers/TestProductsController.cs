@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using FluentAssertions;
 using LazyCache;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Moq;
@@ -87,7 +88,7 @@ namespace TektonLabs.Testing.UnitTests.Controllers
         }
 
         [Test]
-        public async Task Get_OnSuccessCreating_ReturnsStatusCode201()
+        public async Task Post_OnSuccessCreating_ReturnsStatusCode201()
         {
             Product product = new Product { ProductId = 1, Name = "Product", Price = 1, Status = 1, Stock = 1 };
             _service.Setup(s => s.InsertProductAsync(It.IsAny<Product>()))
@@ -102,7 +103,7 @@ namespace TektonLabs.Testing.UnitTests.Controllers
         }
 
         [Test]
-        public async Task Get_OnValidationError_ReturnsStatusCode400()
+        public async Task Post_OnValidationError_ReturnsStatusCode400()
         {
             _service.Setup(s => s.GetValidationErrors())
                 .Returns(new List<FluentValidation.Results.ValidationFailure>());
@@ -111,6 +112,32 @@ namespace TektonLabs.Testing.UnitTests.Controllers
             ProductRequest productRequest = new ProductRequest();
 
             var result = (BadRequestObjectResult)await controller.Post(productRequest);
+
+            result.StatusCode.Should().Be(400);
+        }
+
+        [Test]
+        public async Task Put_OnSuccess_ReturnsStatusCode201()
+        {
+            Product product = new Product { ProductId = 1, Name = "Product 1 updated", Price = 1, Status = 1, Stock = 1 };
+            _service.Setup(s => s.UpdateProductAsync(It.IsAny<Product>()))
+                .ReturnsAsync(true);
+
+            var controller = new ProductsController(_service.Object, _mapper, _cache.Object);
+
+            var result = (NoContentResult)await controller.Put(product);
+
+            result.StatusCode.Should().Be(204);
+        }
+
+        [Test]
+        public async Task Put_OnSuccess_ReturnsStatusCode400()
+        {
+            Product product = new Product { Name = "", Price = 1, Status = 1, Stock = 1 };
+
+            var controller = new ProductsController(_service.Object, _mapper, _cache.Object);
+
+            var result = (BadRequestObjectResult)await controller.Put(product);
 
             result.StatusCode.Should().Be(400);
         }

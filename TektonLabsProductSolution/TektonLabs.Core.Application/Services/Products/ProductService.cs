@@ -33,10 +33,7 @@ namespace TektonLabs.Core.Application.Services.Products
             return insertResult;
         }
 
-        public List<ValidationFailure> GetValidationErrors()
-        {
-            return _validationErrors;
-        }
+        public List<ValidationFailure> GetValidationErrors() => _validationErrors;
 
         public List<StatusData> GetStatusData()
         {
@@ -45,6 +42,27 @@ namespace TektonLabs.Core.Application.Services.Products
             statusData.Add(new StatusData { Id = 1, Name = "Active" });
 
             return statusData;
+        }
+
+        public async Task<bool> UpdateProductAsync(Product product)
+        {
+            bool result = false;
+            _validationErrors = null;
+
+            var validation = await _validator.ValidateAsync(product);
+            if (!validation.IsValid)
+            {
+                _validationErrors = validation.Errors;
+                return result;
+            }
+
+            int resultUpdate = await _repository.UpdateAsync(product);
+            if (resultUpdate > 0)
+            {
+                result = true;
+            }
+
+            return result;
         }
     }
 }

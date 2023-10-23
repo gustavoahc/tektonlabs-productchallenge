@@ -13,5 +13,7 @@ namespace TektonLabs.Core.Application.Services.Products
         List<ValidationFailure> GetValidationErrors();
 
         List<StatusData> GetStatusData();
+
+        Task<bool> UpdateProductAsync(Product product);
     }
 }

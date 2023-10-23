@@ -70,5 +70,22 @@ namespace TektonLabs.Presentation.Api.Controllers
 
             return new CreatedAtRouteResult("GetProduct", new { id = 1 }, result);
         }
+
+        /// <summary>
+        /// Update an existing product
+        /// </summary>
+        /// <param name="product"></param>
+        /// <returns></returns>
+        [HttpPut]
+        public async Task<IActionResult> Put([FromBody] Product product)
+        {
+            bool result = await _service.UpdateProductAsync(product);
+            if (!result)
+            {
+                return BadRequest(_service.GetValidationErrors());
+            }
+
+            return NoContent();
+        }
     }
 }
