@@ -17,3 +17,6 @@
 2023-10-23 20:04:17.1214 INFO Elapsed time: 356 milliseconds in endpoint Get(2)
 2023-10-23 20:04:25.7124 INFO Elapsed time: 9 milliseconds in endpoint Put(product)
 2023-10-23 20:04:29.8981 INFO Elapsed time: 350 milliseconds in endpoint Get(2)
+2023-10-23 21:49:25.0283 INFO Elapsed time: 1808 milliseconds in endpoint Get(1)
+2023-10-23 21:49:32.8363 INFO Elapsed time: 337 milliseconds in endpoint Get(2)
+2023-10-23 21:49:41.8723 INFO Elapsed time: 370 milliseconds in endpoint Get(1)

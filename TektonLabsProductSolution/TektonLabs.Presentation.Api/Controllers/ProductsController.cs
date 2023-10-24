@@ -42,8 +42,14 @@ namespace TektonLabs.Presentation.Api.Controllers
         /// Find product by id
         /// </summary>
         /// <param name="id"></param>
-        /// <returns></returns>
+        /// <returns>Returns the requested product</returns>
+        /// <response code="200">Returns the requested product</response>
+        /// <response code="404">If the specified id cannot be found</response>
+        /// <response code="500">If an error occurs invoking the discounts api or database</response>
         [HttpGet("{id}", Name = "GetProduct")]
+        [ProducesResponseType(typeof(ProductResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(Product), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Get(int id)
         {
             _timer.Start();
@@ -96,8 +102,12 @@ namespace TektonLabs.Presentation.Api.Controllers
         /// Add a new product to database
         /// </summary>
         /// <param name="product"></param>
-        /// <returns></returns>
+        /// <returns>Returns the created product</returns>
+        /// <response code="201">Returns the created product</response>
+        /// <response code="400">If product's properties are wrong</response>
         [HttpPost]
+        [ProducesResponseType(typeof(Product), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(Product), StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Post([FromBody] ProductRequest product)
         {
             _timer.Start();
@@ -122,8 +132,14 @@ namespace TektonLabs.Presentation.Api.Controllers
         /// Update an existing product
         /// </summary>
         /// <param name="product"></param>
-        /// <returns></returns>
+        /// <returns>Result of update action</returns>
+        /// <response code="204">If product is updated successfully</response>
+        /// <response code="400">If product's properties are wrong</response>
+        /// <response code="404">If the specified product id cannot be found</response>
         [HttpPut]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(Product), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(Product), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Put([FromBody] Product product)
         {
             _timer.Start();
