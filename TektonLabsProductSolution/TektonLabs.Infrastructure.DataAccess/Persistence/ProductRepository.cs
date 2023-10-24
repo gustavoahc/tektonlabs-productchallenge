@@ -23,6 +23,7 @@ namespace TektonLabs.Infrastructure.DataAccess.Persistence
 
         public async Task<int> UpdateAsync(Product product)
         {
+            _context.ChangeTracker.Clear();
             _context.Entry(product).State = EntityState.Modified;
             return await _context.SaveChangesAsync();
         }

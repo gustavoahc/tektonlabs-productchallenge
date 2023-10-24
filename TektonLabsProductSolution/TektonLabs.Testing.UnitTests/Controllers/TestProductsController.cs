@@ -12,6 +12,7 @@ using TektonLabs.Presentation.Api.ApiModels.Request;
 using TektonLabs.Presentation.Api.ApiModels.Response;
 using TektonLabs.Presentation.Api.ApiModels.SettingParameters;
 using TektonLabs.Presentation.Api.Controllers;
+using TektonLabs.Presentation.Api.Helpers.Logging;
 using TektonLabs.Presentation.Api.Helpers.Mapping;
 using TektonLabs.Testing.UnitTests.TestData;
 
@@ -22,7 +23,9 @@ namespace TektonLabs.Testing.UnitTests.Controllers
         private Mock<IProductService> _service;
         private readonly IMapper _mapper;
         private Mock<IAppCache> _cache;
-        private IOptions<Parameter> parameters;
+        private IOptions<Parameter> _parameters;
+        private IOptions<Parameter> _parametersError;
+        private Mock<ILogging> _logging;
 
         public TestProductsController()
         {
@@ -42,24 +45,28 @@ namespace TektonLabs.Testing.UnitTests.Controllers
         {
             _service = new Mock<IProductService>();
             _cache = new Mock<IAppCache>();
+            _logging = new Mock<ILogging>();
 
-            parameters = Options.Create(new Parameter()
+            _parameters = Options.Create(new Parameter()
             {
                 DiscountsUrl = "https://653182fb4d4c2e3f333d17ac.mockapi.io/api/v1/discounts"
+            });
+            _parametersError = Options.Create(new Parameter()
+            {
+                DiscountsUrl = "https://653182fb4d3f333d17ac.mockapi.io/api/v1/discounts"
             });
         }
 
         [Test]
         public async Task Get_OnSuccess_ReturnsStatusCode200()
         {
-            Product product = new Product { ProductId = 1, Name = "Product", Price = 1, Status = 1, Stock = 1 };
             _service.Setup(s => s.GetProductAsync(1))
-                .ReturnsAsync(product);
+                .ReturnsAsync(ProductTestData.GetProduct());
 
             _cache.Setup(c => c.GetOrAdd(It.IsAny<string>(), It.IsAny<Func<ICacheEntry, List<StatusData>>>(), It.IsAny<MemoryCacheEntryOptions>()))
-                .Returns(ProductTestData.GetStatusData());
+                .Returns(ProductTestData.GetStatusDataList());
 
-            var controller = new ProductsController(_service.Object, _mapper, _cache.Object, parameters);
+            var controller = new ProductsController(_service.Object, _mapper, _cache.Object, _parameters, _logging.Object);
 
             var result = (OkObjectResult)await controller.Get(1);
 
@@ -69,14 +76,13 @@ namespace TektonLabs.Testing.UnitTests.Controllers
         [Test]
         public async Task Get_OnSuccess_ReturnsProduct()
         {
-            Product product = new Product { ProductId = 1, Name = "Product", Price = 1, Status = 1, Stock = 1 };
             _service.Setup(s => s.GetProductAsync(1))
-                .ReturnsAsync(product);
+                .ReturnsAsync(ProductTestData.GetProduct());
 
             _cache.Setup(c => c.GetOrAdd(It.IsAny<string>(), It.IsAny<Func<ICacheEntry, List<StatusData>>>(), It.IsAny<MemoryCacheEntryOptions>()))
-                .Returns(ProductTestData.GetStatusData());
+                .Returns(ProductTestData.GetStatusDataList());
 
-            var controller = new ProductsController(_service.Object, _mapper, _cache.Object, parameters);
+            var controller = new ProductsController(_service.Object, _mapper, _cache.Object, _parameters, _logging.Object);
 
             var result = (OkObjectResult)await controller.Get(1);
 
@@ -87,7 +93,7 @@ namespace TektonLabs.Testing.UnitTests.Controllers
         [Test]
         public async Task Get_OnNoProductFound_ReturnsStatusCode404()
         {
-            var controller = new ProductsController(_service.Object, _mapper, _cache.Object, parameters);
+            var controller = new ProductsController(_service.Object, _mapper, _cache.Object, _parameters, _logging.Object);
 
             var result = (NotFoundResult)await controller.Get(1);
 
@@ -97,14 +103,13 @@ namespace TektonLabs.Testing.UnitTests.Controllers
         [Test]
         public async Task Get_OnErrorConsumingDiscountService_ReturnsStatusCode500()
         {
-            Product product = new Product { ProductId = 1, Name = "Product", Price = 1, Status = 1, Stock = 1 };
             _service.Setup(s => s.GetProductAsync(1))
-                .ReturnsAsync(product);
+                .ReturnsAsync(ProductTestData.GetProduct());
 
             _cache.Setup(c => c.GetOrAdd(It.IsAny<string>(), It.IsAny<Func<ICacheEntry, List<StatusData>>>(), It.IsAny<MemoryCacheEntryOptions>()))
-                .Returns(ProductTestData.GetStatusData());
+                .Returns(ProductTestData.GetStatusDataList());
 
-            var controller = new ProductsController(_service.Object, _mapper, _cache.Object, parameters);
+            var controller = new ProductsController(_service.Object, _mapper, _cache.Object, _parametersError, _logging.Object);
 
             var result = (StatusCodeResult)await controller.Get(1);
 
@@ -114,11 +119,11 @@ namespace TektonLabs.Testing.UnitTests.Controllers
         [Test]
         public async Task Post_OnSuccessCreating_ReturnsStatusCode201()
         {
-            Product product = new Product { ProductId = 1, Name = "Product", Price = 1, Status = 1, Stock = 1 };
+            Product product = ProductTestData.GetProduct();
             _service.Setup(s => s.InsertProductAsync(It.IsAny<Product>()))
                 .ReturnsAsync(product);
 
-            var controller = new ProductsController(_service.Object, _mapper, _cache.Object, parameters);
+            var controller = new ProductsController(_service.Object, _mapper, _cache.Object, _parameters, _logging.Object);
             ProductRequest productRequest = _mapper.Map<ProductRequest>(product);
 
             var result = (CreatedAtRouteResult)await controller.Post(productRequest);
@@ -132,7 +137,7 @@ namespace TektonLabs.Testing.UnitTests.Controllers
             _service.Setup(s => s.GetValidationErrors())
                 .Returns(new List<FluentValidation.Results.ValidationFailure>());
 
-            var controller = new ProductsController(_service.Object, _mapper, _cache.Object, parameters);
+            var controller = new ProductsController(_service.Object, _mapper, _cache.Object, _parameters, _logging.Object);
             ProductRequest productRequest = new ProductRequest();
 
             var result = (BadRequestObjectResult)await controller.Post(productRequest);
@@ -143,13 +148,14 @@ namespace TektonLabs.Testing.UnitTests.Controllers
         [Test]
         public async Task Put_OnSuccess_ReturnsStatusCode201()
         {
-            Product product = new Product { ProductId = 1, Name = "Product 1 updated", Price = 1, Status = 1, Stock = 1 };
+            _service.Setup(s => s.GetProductAsync(1))
+                .ReturnsAsync(ProductTestData.GetProduct());
             _service.Setup(s => s.UpdateProductAsync(It.IsAny<Product>()))
                 .ReturnsAsync(true);
 
-            var controller = new ProductsController(_service.Object, _mapper, _cache.Object, parameters);
+            var controller = new ProductsController(_service.Object, _mapper, _cache.Object, _parameters, _logging.Object);
 
-            var result = (NoContentResult)await controller.Put(product);
+            var result = (NoContentResult)await controller.Put(ProductTestData.GetUpdatedProduct());
 
             result.StatusCode.Should().Be(204);
         }
@@ -157,11 +163,12 @@ namespace TektonLabs.Testing.UnitTests.Controllers
         [Test]
         public async Task Put_OnSuccess_ReturnsStatusCode400()
         {
-            Product product = new Product { Name = "", Price = 1, Status = 1, Stock = 1 };
+            _service.Setup(s => s.GetProductAsync(It.IsAny<int>()))
+                .ReturnsAsync(ProductTestData.GetProduct());
 
-            var controller = new ProductsController(_service.Object, _mapper, _cache.Object, parameters);
+            var controller = new ProductsController(_service.Object, _mapper, _cache.Object, _parameters, _logging.Object);
 
-            var result = (BadRequestObjectResult)await controller.Put(product);
+            var result = (BadRequestObjectResult)await controller.Put(ProductTestData.GetInvalidProduct());
 
             result.StatusCode.Should().Be(400);
         }

@@ -2,6 +2,7 @@
 using LazyCache;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using System.Diagnostics;
 using TektonLabs.Core.Application.Services.Products;
 using TektonLabs.Core.Domain.Common;
 using TektonLabs.Core.Domain.Entities;
@@ -9,6 +10,7 @@ using TektonLabs.Presentation.Api.ApiModels.Request;
 using TektonLabs.Presentation.Api.ApiModels.Response;
 using TektonLabs.Presentation.Api.ApiModels.SettingParameters;
 using TektonLabs.Presentation.Api.Helpers.ExternalApi;
+using TektonLabs.Presentation.Api.Helpers.Logging;
 
 namespace TektonLabs.Presentation.Api.Controllers
 {
@@ -20,13 +22,20 @@ namespace TektonLabs.Presentation.Api.Controllers
         private readonly IMapper _mapper;
         private readonly IAppCache _cache;
         private readonly Parameter _parameter;
+        private readonly ILogging _logging;
+        private readonly Stopwatch _timer = new Stopwatch();
 
-        public ProductsController(IProductService service, IMapper mapper, IAppCache cache, IOptions<Parameter> parameter)
+        public ProductsController(IProductService service
+            , IMapper mapper
+            , IAppCache cache
+            , IOptions<Parameter> parameter
+            , ILogging logging)
         {
             _service = service;
             _mapper = mapper;
             _cache = cache;
             _parameter = parameter.Value;
+            _logging = logging;
         }
 
         /// <summary>
@@ -37,6 +46,8 @@ namespace TektonLabs.Presentation.Api.Controllers
         [HttpGet("{id}", Name = "GetProduct")]
         public async Task<IActionResult> Get(int id)
         {
+            _timer.Start();
+
             Product product = await _service.GetProductAsync(id);
             ProductResponse response = _mapper.Map<ProductResponse>(product);
             if (response == null)
@@ -67,6 +78,12 @@ namespace TektonLabs.Presentation.Api.Controllers
 
             response.StatusName = statusData.Find(s => s.Id == product.Status).Name;
 
+            _logging.LogMessage(String.Format("Elapsed time: {0} milliseconds in endpoint Get({1})"
+                                                , _timer.ElapsedMilliseconds.ToString()
+                                                , id.ToString())
+                );
+            _timer.Stop();
+
             return Ok(response);
         }
 
@@ -83,6 +100,8 @@ namespace TektonLabs.Presentation.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] ProductRequest product)
         {
+            _timer.Start();
+
             Product productToInsert = _mapper.Map<Product>(product);
             Product result = await _service.InsertProductAsync(productToInsert);
 
@@ -90,6 +109,11 @@ namespace TektonLabs.Presentation.Api.Controllers
             {
                 return BadRequest(_service.GetValidationErrors());
             }
+
+            _logging.LogMessage(String.Format("Elapsed time: {0} milliseconds in endpoint Post(product)"
+                                                , _timer.ElapsedMilliseconds.ToString())
+                );
+            _timer.Stop();
 
             return new CreatedAtRouteResult("GetProduct", new { id = 1 }, result);
         }
@@ -102,11 +126,24 @@ namespace TektonLabs.Presentation.Api.Controllers
         [HttpPut]
         public async Task<IActionResult> Put([FromBody] Product product)
         {
+            _timer.Start();
+
+            Product productResponse = await _service.GetProductAsync(product.ProductId);
+            if (productResponse == null)
+            {
+                return NotFound();
+            }
+
             bool result = await _service.UpdateProductAsync(product);
             if (!result)
             {
                 return BadRequest(_service.GetValidationErrors());
             }
+
+            _logging.LogMessage(String.Format("Elapsed time: {0} milliseconds in endpoint Put(product)"
+                                                , _timer.ElapsedMilliseconds.ToString())
+                );
+            _timer.Stop();
 
             return NoContent();
         }

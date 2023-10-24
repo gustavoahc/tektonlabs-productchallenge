@@ -1,7 +1,9 @@
 using AutoMapper;
+using NLog;
 using TektonLabs.Core.Application;
 using TektonLabs.Infrastructure.DataAccess;
 using TektonLabs.Presentation.Api.ApiModels.SettingParameters;
+using TektonLabs.Presentation.Api.Helpers.Logging;
 using TektonLabs.Presentation.Api.Helpers.Mapping;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,6 +26,10 @@ var builder = WebApplication.CreateBuilder(args);
 
     //Cache
     builder.Services.AddLazyCache();
+
+    //Logging
+    LogManager.Setup().LoadConfigurationFromFile(String.Concat(Directory.GetCurrentDirectory(), "/nlog.config"));
+    builder.Services.AddSingleton<ILogging, Logging>();
 
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
